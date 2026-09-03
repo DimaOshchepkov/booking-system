@@ -14,7 +14,8 @@ dependencies = [
     "alembic (>=1.19.1,<2.0.0)",
     "uvicorn[standard] (>=0.52.4,<0.53.0)",
     "aiosqlite (>=0.22.1,<0.23.0)",
-    "pydantic-settings (>=2.15.0,<3.0.0)"
+    "pydantic-settings (>=2.15.0,<3.0.0)",
+    "fastapi-pagination (>=0.15.16,<0.16.0)"
 ]
 
 [tool.poetry]

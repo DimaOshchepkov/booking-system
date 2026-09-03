@@ -1,5 +1,7 @@
 from datetime import date, time
 
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import and_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,7 +64,9 @@ class BookingService:
     async def list(
         self,
         booking_date: date | None = None,
-    ) -> list[Booking]:
+        page: int = 1,
+        size: int = 50,
+    ) -> Page[Booking]:
         """Возвращает список активных бронирований."""
         query = select(Booking).where(Booking.status == "active")
 
@@ -71,8 +75,10 @@ class BookingService:
 
         query = query.order_by(Booking.booking_date, Booking.booking_time)
 
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+        pagination_params = Params(page=page, size=size)
+
+        return await paginate(self.db, query, params=pagination_params)
+
 
     async def get_by_id(self, booking_id: int) -> Booking:
         """

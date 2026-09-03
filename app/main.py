@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 
+from fastapi_pagination import add_pagination
+
 from app.api import booking
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -18,6 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(booking.router)
+add_pagination(app)
 
 
 @app.exception_handler(BookingError)

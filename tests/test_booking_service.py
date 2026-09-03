@@ -92,7 +92,7 @@ class TestBookingService:
 
         await booking_service.cancel(booking1.id)
 
-        bookings = await booking_service.list()
+        bookings = (await booking_service.list()).items
         assert len(bookings) == 1
         assert bookings[0].id != booking1.id
 
@@ -106,7 +106,7 @@ class TestBookingService:
         )
         await booking_service.create(booking_data2)
 
-        bookings = await booking_service.list(booking_date=date(2026, 9, 10))
+        bookings = (await booking_service.list(booking_date=date(2026, 9, 10))).items
         assert len(bookings) == 1
         assert bookings[0].booking_date == date(2026, 9, 10)
 
@@ -125,7 +125,7 @@ class TestBookingService:
 
         await booking_service.create(booking_data)
 
-        bookings = await booking_service.list()
+        bookings = (await booking_service.list()).items
         assert len(bookings) == 3
         assert bookings[0].booking_date == date(2026, 9, 10)
         assert bookings[1].booking_time == time(12, 0)
