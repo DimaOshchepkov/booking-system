@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from sqlalchemy import Date, Integer, String, Time
+from sqlalchemy import Date, Index, Integer, String, Time, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -8,6 +8,17 @@ from app.database import Base
 
 class Booking(Base):
     __tablename__ = "bookings"
+    
+    __table_args__ = (
+        Index(
+            "uq_booking_active_slot",
+            "booking_date",
+            "booking_time",
+            unique=True,
+            sqlite_where=text("status = 'active'"),
+            postgresql_where=text("status = 'active'"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)

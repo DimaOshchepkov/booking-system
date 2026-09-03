@@ -9,99 +9,104 @@ from app.models.booking import Booking
 from app.schemas.booking import BookingCreate
 
 
-async def is_slot_available(
-    db: AsyncSession,
-    booking_date: date,
-    booking_time: time,
-) -> bool:
-    query = select(Booking.id).where(
-        and_(
-            Booking.booking_date == booking_date,
-            Booking.booking_time == booking_time,
-            Booking.status == "active",
+class BookingService:
+    """Сервис для работы с бронированиями."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def is_slot_available(
+        self,
+        booking_date: date,
+        booking_time: time,
+    ) -> bool:
+        """Проверяет, свободен ли слот."""
+        query = select(Booking.id).where(
+            and_(
+                Booking.booking_date == booking_date,
+                Booking.booking_time == booking_time,
+                Booking.status == "active",
+            )
         )
-    )
-    result = await db.execute(query)
-    return result.scalar_one_or_none() is None
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none() is None
 
+    async def create(self, data: BookingCreate) -> Booking:
+        """
+        Создаёт бронирование.
 
-async def create_booking(db: AsyncSession, data: BookingCreate) -> Booking:
-    """
-    Raises:
-        SlotUnavailableError:
-        SlotUnavailableError:
-    """
-    if not await is_slot_available(db, data.booking_date, data.booking_time):
-        raise SlotUnavailableError()
+        Raises:
+            SlotUnavailableError: Если время уже занято.
+        """
+        if not await self.is_slot_available(data.booking_date, data.booking_time):
+            raise SlotUnavailableError()
 
-    booking = Booking(
-        name=data.name,
-        phone=data.phone,
-        booking_date=data.booking_date,
-        booking_time=data.booking_time,
-        guests=data.guests,
-        status="active",
-    )
-    db.add(booking)
+        booking = Booking(
+            name=data.name,
+            phone=data.phone,
+            booking_date=data.booking_date,
+            booking_time=data.booking_time,
+            guests=data.guests,
+            status="active",
+        )
+        self.db.add(booking)
 
-    try:
-        await db.flush()
-    except (
-        IntegrityError
-    ):  # защита от гонок. Основано на ограничении uq_booking_active_slot
-        await db.rollback()
-        raise SlotUnavailableError() from None
+        try:
+            await self.db.flush()
+        except IntegrityError:
+            await self.db.rollback()
+            raise SlotUnavailableError() from None
 
-    await db.refresh(booking)
-    return booking
+        return booking
 
+    async def list(
+        self,
+        booking_date: date | None = None,
+    ) -> list[Booking]:
+        """Возвращает список активных бронирований."""
+        query = select(Booking).where(Booking.status == "active")
 
-async def list_bookings(
-    db: AsyncSession,
-    booking_date: date | None = None,
-) -> list[Booking]:
+        if booking_date is not None:
+            query = query.where(Booking.booking_date == booking_date)
 
-    query = select(Booking).where(Booking.status == "active")
+        query = query.order_by(Booking.booking_date, Booking.booking_time)
 
-    if booking_date is not None:
-        query = query.where(Booking.booking_date == booking_date)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
 
-    query = query.order_by(Booking.booking_date, Booking.booking_time)
+    async def get_by_id(self, booking_id: int) -> Booking:
+        """
+        Получает бронь по ID.
 
-    result = await db.execute(query)
-    return list(result.scalars().all())
+        Raises:
+            BookingNotFoundError: Если бронь не найдена.
+        """
+        result = await self.db.execute(select(Booking).where(Booking.id == booking_id))
+        booking = result.scalar_one_or_none()
 
+        if booking is None:
+            raise BookingNotFoundError(booking_id)
 
-async def get_booking_by_id(db: AsyncSession, booking_id: int) -> Booking:
-    """
-    Raises:
-        BookingNotFoundError:
-    """
-    result = await db.execute(select(Booking).where(Booking.id == booking_id))
-    booking = result.scalar_one_or_none()
+        return booking
 
-    if booking is None:
-        raise BookingNotFoundError(booking_id)
+    async def cancel(self, booking_id: int) -> Booking:
+        """
+        Отменяет бронь (меняет status на 'cancelled').
 
-    return booking
+        Raises:
+            BookingNotFoundError: Если бронь не найдена.
+        """
+        stmt = (
+            update(Booking)
+            .where(Booking.id == booking_id)
+            .values(status="cancelled")
+            .returning(Booking)
+        )
 
+        result = await self.db.execute(stmt)
+        booking = result.scalar_one_or_none()
 
-async def cancel_booking(db: AsyncSession, booking_id: int) -> Booking:
-    """
-    Raises:
-        BookingNotFoundError:
-    """
-    stmt = (
-        update(Booking)
-        .where(Booking.id == booking_id)
-        .values(status="cancelled")
-        .returning(Booking)
-    )
+        if booking is None:
+            raise BookingNotFoundError(booking_id)
 
-    result = await db.execute(stmt)
-    booking = result.scalar_one_or_none()
-
-    if booking is None:
-        raise BookingNotFoundError(booking_id)
-
-    return booking
+        return booking
