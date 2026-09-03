@@ -1,5 +1,4 @@
 from collections.abc import AsyncGenerator
-from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -28,7 +27,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
-        except Exception:
+        except BaseException:
             await session.rollback()
             raise
         finally:

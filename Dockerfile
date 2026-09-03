@@ -33,6 +33,8 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuse
 
 WORKDIR /app
 
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
+
 COPY --from=builder --chown=appuser:appuser /build/.venv /app/.venv
 COPY --chown=appuser:appuser ./app ./app
 COPY --chown=appuser:appuser ./alembic ./alembic

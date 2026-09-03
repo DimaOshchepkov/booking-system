@@ -15,7 +15,7 @@ services:
       - ./alembic.ini:/app/alembic.ini
       - ./pyproject.toml:/app/pyproject.toml
       - ./poetry.lock:/app/poetry.lock
-      - sqlite_data:/app/data
+      - ./data:/app/data
     
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -23,7 +23,3 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
-volumes:
-  sqlite_data:
-    name: booking_system_dev_data
