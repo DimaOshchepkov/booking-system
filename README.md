@@ -3,7 +3,7 @@
 ## Quick start
 
 ```bash
-cp .env.exaple .env
+cp .env.example .env
 docker compose up --build # сборка образа и запуск
 docker exec -it booking-system python -m alembic upgrade head # запуск миграций
 ```
